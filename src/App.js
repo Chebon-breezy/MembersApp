@@ -1,45 +1,40 @@
-import React from "react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import firebase from "firebase/app";
-import Login from "./Login";
-import Signup from "./Signup"; // Add this import
-import UserDashboard from "./UserDashboard";
+import React, { useEffect, useState } from "react";
 import AdminDashboard from "./AdminDashboard";
+import UserDashboard from "./UserDashboard";
+import { onAuthStateChanged, getIdTokenResult } from "firebase/auth";
 
 const App = () => {
-  const [user, setUser] = React.useState(null);
+  const [user, setUser] = useState(null);
 
-  React.useEffect(() => {
-    const unsubscribe = firebase.auth.onAuthStateChanged((authUser) => {
-      if (authUser) {
-        setUser(authUser);
+  useEffect(() => {
+    const auth = getAuth();
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        getIdTokenResult(user).then((idTokenResult) => {
+          // Confirm the user is an Admin.
+          if (!!idTokenResult.claims.admin) {
+            setUser({ ...user, role: "admin" }); // set user role to "admin"
+          } else {
+            setUser({ ...user, role: "user" }); // set user role to "user"
+          }
+        });
       } else {
         setUser(null);
       }
     });
-
-    return () => {
-      unsubscribe();
-    };
   }, []);
 
-  return (
-    <Router>
-      <Routes>
-        {!user ? (
-          <>
-            <Route path="/signup" element={<Signup />} /> {/* New route */}
-            <Route path="/" element={<Login />} />
-          </>
-        ) : (
-          <>
-            <Route path="/user" element={<UserDashboard />} />
-            <Route path="/admin" element={<AdminDashboard />} />
-          </>
-        )}
-      </Routes>
-    </Router>
-  );
+  const renderDashboard = () => {
+    if (user && user.role === "admin") {
+      return <AdminDashboard />;
+    } else if (user && user.role === "user") {
+      return <UserDashboard />;
+    } else {
+      return <Login />;
+    }
+  };
+
+  return <div>{renderDashboard()}</div>;
 };
 
 export default App;

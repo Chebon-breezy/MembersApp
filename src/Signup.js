@@ -25,3 +25,5 @@ function SignUp() {
     </form>
   );
 }
+
+export default SignUp;
